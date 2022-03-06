@@ -10,37 +10,35 @@ Laravel Sanctum provides a featherweight authentication system for SPAs (single 
 
 
 ## Getting Started
-### Step 1: setup database in .env file
+###  setup database in .env file
 
-```` 
+```
 DB_DATABASE=youtube
 DB_USERNAME=root
 DB_PASSWORD= redhat@123
-````
+```
 
-## Step 2:Install Laravel Sanctum.
+## Install Laravel Sanctum.
 
-````
+```
 composer require laravel/sanctum
-````
+```
 
-## Step 3:Publish the Sanctum configuration and migration files .
+## Publish the Sanctum configuration and migration files .
 
-````
+```
 php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+```
 
-````
+## Run your database migrations.
 
-## Step 4:Run your database migrations.
-
-````
+```
 php artisan migrate
+```
 
-````
+## Add the Sanctum's middleware.
 
-## Step 5:Add the Sanctum's middleware.
-
-````
+```javascript
 ../app/Http/Kernel.php
 
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
@@ -51,7 +49,7 @@ use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
         ...
 
         'api' => [
-            EnsureFrontendRequestsAreStateful::class,
+            EnsureFrontendRequestsAreStateful::class, // add this line
             'throttle:60,1',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
@@ -60,9 +58,9 @@ use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
     ...
 ],
 
-````
+```
 
-## Step 6:To use tokens for users.
+## To use tokens for users.
 
 ````
 use Laravel\Sanctum\HasApiTokens;
@@ -74,13 +72,13 @@ class User extends Authenticatable
 
 ````
 
-## Step 7:Let's create the seeder for the User model
+## Let's create the seeder for the User model
 
 ```javascript 
 php artisan make:seeder UsersTableSeeder
-````
+```
 
-## Step 8:Now let's insert as record
+## Now let's insert as record
 
 ```javascript 
 use Illuminate\Support\Facades\DB;
@@ -92,16 +90,15 @@ DB::table('users')->insert([
     'email' => 'john@doe.com',
     'password' => Hash::make('password')
 ]);
-````
+```
 
-## Step 9:To seed users table with user
+## To seed users table with user
 
 ```javascript 
 php artisan db:seed --class=UsersTableSeeder
-````
+```
 
-
-## Step 10:  create a controller nad  /login route in the routes/api.php file:
+## login & register function in the AuthController
 
 
 ```javascript 
@@ -114,19 +111,18 @@ use App\User;
 use Illuminate\Support\Facades\Hash;
 class UserController extends Controller
 {
-    // 
-
-    function index(Request $request)
+    function login(Request $request)
     {
+
         $user= User::where('email', $request->email)->first();
-        // print_r($data);
+
             if (!$user || !Hash::check($request->password, $user->password)) {
                 return response([
                     'message' => ['These credentials do not match our records.']
                 ], 404);
             }
         
-             $token = $user->createToken('my-app-token')->plainTextToken;
+            $token = $user->createToken('my-app-token')->plainTextToken;
         
             $response = [
                 'user' => $user,
@@ -134,14 +130,44 @@ class UserController extends Controller
             ];
         
              return response($response, 201);
+
     }
+
+    function register(Request $request)
+    {
+
+        $fields = $request->validate([
+            'fname' => 'required|string',
+            'lname' => 'required|string',
+            'email' => 'required|string|unique:users,email',
+            'phone' => 'required|string',
+            'password' => 'required|string|confirmed'
+        ]);
+
+        $user = User::create([
+            'fname' => $fields['fname'],
+            'lname' => $fields['lname'],
+            'email' => $fields['email'],
+            'phone' => $fields['phone'],
+            'password' => bcrypt($fields['password'])
+        ]);
+
+        $token = $user->createToken('my-app-token')->plainTextToken;
+
+        $response = [
+            'user' => $user,
+            'token' => $token
+        ];
+
+        return response($response , 201);
+    }
+
 }
 
+```
 
-````
 
-
-## Step 11: Test with postman, Result will be below
+## Test with postman, Result will be below
 
 ```javascript 
 
@@ -151,24 +177,24 @@ class UserController extends Controller
         "name": "John Doe",
         "email": "john@doe.com",
         "email_verified_at": null,
-        "created_at": null,
-        "updated_at": null
     },
     "token": "AbQzDgXa..."
 }
 
-````
+```
 
-## Step 11: Make Details API or any other with secure route  
+## Make Details API or any other with secure route  
 
 ```javascript 
 
 Route::group(['middleware' => 'auth:sanctum'], function(){
-    //All secure URL's
 
-    });
+    // Secured Routes
+
+});
 
 
-Route::post("login",[UserController::class,'index']);
+Route::post("login",[UserController::class,'login']);
+Route::post("login",[UserController::class,'register']);
 
-````
+```
